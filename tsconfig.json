@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "module": "amd"
+    },
+    "exclude": [
+        ".vscode",
+        "node_modules",
+        "bower_components"
+    ]
+}

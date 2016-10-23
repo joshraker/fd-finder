@@ -1,0 +1,8 @@
+node_modules
+bower_components
+dist
+src/typings
+src/vendor
+src/js/**/*.js
+src/css/**/*.css
+.vscode
