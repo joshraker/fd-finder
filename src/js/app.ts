@@ -5,6 +5,7 @@ import appView from 'viewModels/appView';
 import router from 'router';
 
 window['ko'] = ko;
+window['appView'] = appView;
 
 ko.applyBindings(appView);
 

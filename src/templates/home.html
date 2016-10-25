@@ -1,8 +1,66 @@
 <h1>
-    <!-- remove:start -->
-    Home    
-    <!-- remove:end -->
-    <!-- remove:line
-    Build
-    remove:line -->
+    Functional Dependency Finder
 </h1>
+<br />
+
+<div>
+    <input class="input-file" type="file" data-bind="event: { change: function(data, e) { this.fileChanged(e); } }" />
+    <br />
+    <input id="hasHeader" type="checkbox" data-bind="checked: hasHeader" />
+    <label class="clickable" for="hasHeader">Data includes a header</label>
+</div>
+<br />
+
+<div class="width-100" data-bind="visible: data().length !== 0">
+    <h3>Data</h3>
+    <div class="table-container">
+        <div class="table border data">
+            <div class="tr bold">
+                <div class="td">#</div>
+                <!-- ko foreach: headers -->
+                <div class="td" data-bind="text: $data"></div>
+                <!-- /ko -->
+            </div>
+            <!-- ko foreach: data -->
+            <div class="tr attribute">
+                <div class="td bold" data-bind="text: $index() + 1"></div>
+                <!-- ko foreach: $data -->
+                <div class="td" data-bind="text: $data"></div>
+                <!-- /ko -->
+            </div>
+            <!-- /ko -->
+        </div>
+    </div>
+    <br />
+
+    <div>
+        <h3>Functional Dependencies</h3>
+        <div>true = Row determines Column<div>
+        <div>m:n = Conflict between entries m and n<div>
+        <div>- = Trivial<div>
+        <input id="highlight" type="checkbox" data-bind="checked: highlight" />
+        <label class="clickable" for="highlight">Highlight functional dependencies</label>
+    </div>
+    <br />
+
+    <div class="table-container">
+        <div class="table border">
+            <div class="tr bold">
+                <div class="td"></div>
+                <!-- ko foreach: headers -->
+                    <div class="td" data-bind="text: $data"></div>
+                <!-- /ko -->
+            </div>
+            <!-- ko foreach: fds -->
+            <div class="tr">
+                <div class="td bold" data-bind="text: $parent.headers()[$index()]"></div>
+
+                <!-- ko foreach: $data -->
+                <div class="td" data-bind="text: $data, css: { highlight: $data === 'true' && $parents[1].highlight() }"></div>
+                <!-- /ko -->
+            </div>
+            <!-- /ko -->
+        </div>
+    </div>
+    <br />
+</div>
