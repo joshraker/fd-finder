@@ -18,9 +18,9 @@ export class AppView extends BaseView {
     fileReader: FileReader = new FileReader();
     hasHeader: KnockoutObservable<Boolean> = ko.observable(true);
     highlight: KnockoutObservable<Boolean> = ko.observable(true);
-    content: KnockoutObservable<string> = ko.observable('');
-    headers: KnockoutObservableArray<string> = ko.observableArray([]);
+    dataString: KnockoutObservable<string> = ko.observable('');
     data: KnockoutComputed<Array<Array<string>>>;
+    headers: KnockoutObservableArray<string> = ko.observableArray([]);
     fds: KnockoutComputed<Array<Array<string>>>;
     deps: Array<Object> = [];
 
@@ -29,13 +29,34 @@ export class AppView extends BaseView {
         this.fileReader.onload = (e) => this.onFileLoad(e);
 
         this.data = ko.pureComputed((): Array<Array<string>> => {
+            // extract data from the dataString
             let data: Array<Array<string>> = [];
-            let rows: Array<string> = this.content().split(/\n/);
+            let rowStrings: Array<string> = this.dataString().split(/\n/);
             let headers: Array<string> = [];
-            rows.pop(); // remove the empty final row
+            rowStrings.pop(); // remove the empty final row
 
-            rows.forEach((row) => {
-                data.push(row.split(/,/));
+            rowStrings.forEach((rowString) => {
+                let row: Array<string> = rowString.split(/,/);
+                let start: number = -1;
+
+                for (let i = 0; i < row.length; i++) {
+                    // handle commas in entries
+                    let entry: string = row[i];
+
+                    if (entry[0] === '"') {
+                        start = i;
+                    }
+                    else if (entry[entry.length - 1] === '"' && start > -1) {
+                        // replace the entries that were split because of commas
+                        let replace: string = row.slice(start, i + 1).join(','); // get string
+                        replace = replace.slice(1, replace.length - 1); // remove quotes
+                        row.splice(start, i - start + 1, replace); // replace entries
+                        i = start; // adjust for replacing columns
+                        start = -1;
+                    }
+                }
+
+                data.push(row);
             });
 
             if (this.hasHeader()) {
@@ -54,20 +75,20 @@ export class AppView extends BaseView {
 
         this.fds = ko.pureComputed((): Array<Array<string>> => {
             let data = this.data();
-            let length = data.length;
             let fds: Array<Array<string>> = [];
 
-            if (length) {
+            if (data.length) {
+                let length = this.headers().length;
                 this.deps = [];
 
                 for (let fdr = 0; fdr < length; fdr++) {
                     let fdRow = [];
 
-                    for (let fdc = 0; fdc < data[fdr].length; fdc++) {
+                    for (let fdc = 0; fdc < length; fdc++) {
                         let deps = {};
                         let result = fdr === fdc ? '-' : 'true';
 
-                        for (let i = 0; i < length && result === 'true'; i++) {
+                        for (let i = 0; i < data.length && result === 'true'; i++) {
                             let key = data[i][fdr];
                             let value = data[i][fdc];
                             let dep = deps[key];
@@ -99,7 +120,7 @@ export class AppView extends BaseView {
     }
 
     onFileLoad(e: any) {
-        this.content(e.target.result);
+        this.dataString(e.target.result);
     }
 }
 
