@@ -2,13 +2,41 @@ import * as ko from 'knockout';
 
 import BaseView from 'viewModels/BaseView';
 
-export class Depenedency {
-    value: string = null;
-    index: number = null; // index of first occurance
+export class Value<T> {
+    value: KnockoutObservable<T> = ko.observable(null);
 
-    constructor(value: string, index: number) {
+    constructor(value: T = null) {
+        this.value(value);
+    }
+}
+
+export class Dependency {
+    value: string = null;
+    lastIndex: number = null; // index of last occurance of the key
+    failIndex: number = null; // index of the key that conflicts
+
+    constructor(value: string = null, startIndex: number = null) {
         this.value = value;
-        this.index = index;
+        this.lastIndex = startIndex;
+    }
+
+    display(): string {
+        if (this.trivial()) {
+            return '-';
+        }
+
+        // if failIndex is not defined the dependency exists
+        return this.failIndex ? `${this.lastIndex + 1}:${this.failIndex + 1}` : 'true';
+    }
+
+    exists(): boolean {
+        // trivials not included
+        return this.failIndex === null;
+    }
+
+    trivial(): boolean {
+        // if the two indices are defined and the same it's trivial
+        return this.lastIndex !== null && this.lastIndex === this.failIndex;
     }
 }
 
@@ -16,16 +44,24 @@ export class AppView extends BaseView {
     currentView: KnockoutObservable<BaseView> = ko.observable(null);
     inputFile: KnockoutObservable<File> = ko.observable(null);
     fileReader: FileReader = new FileReader();
-    hasHeader: KnockoutObservable<Boolean> = ko.observable(true);
-    highlight: KnockoutObservable<Boolean> = ko.observable(true);
+    hasHeader: KnockoutObservable<boolean> = ko.observable(true);
+    highlight: KnockoutObservable<boolean> = ko.observable(true);
     dataString: KnockoutObservable<string> = ko.observable('');
     data: KnockoutComputed<Array<Array<string>>>;
     headers: KnockoutObservableArray<string> = ko.observableArray([]);
-    fds: KnockoutComputed<Array<Array<string>>>;
-    deps: Array<Object> = [];
+    fds: KnockoutComputed<Array<Array<Dependency>>>;
+    compositeFds: KnockoutComputed<Array<Dependency>>;
+    lastIndex: KnockoutObservable<number> = ko.observable(null);
+    failIndex: KnockoutObservable<number> = ko.observable(null);
+    determinantIndices: KnockoutObservableArray<number> = ko.observableArray([]);
+    dependentIndex: KnockoutObservable<number> = ko.observable(null);
+    compositeIndices: KnockoutObservableArray<Value<number>> = ko.observableArray([]);
+    unwrappedComposites: KnockoutComputed<Array<number>>;
+    compositeVisible: KnockoutComputed<boolean>;
 
     constructor() {
         super('home.html');
+        this.compositeIndices([new Value<number>(), new Value<number>()]);
         this.fileReader.onload = (e) => this.onFileLoad(e);
 
         this.data = ko.pureComputed((): Array<Array<string>> => {
@@ -73,44 +109,116 @@ export class AppView extends BaseView {
             return data;
         });
 
-        this.fds = ko.pureComputed((): Array<Array<string>> => {
+        this.fds = ko.pureComputed((): Array<Array<Dependency>> => {
             let data = this.data();
-            let fds: Array<Array<string>> = [];
+            let fds: Array<Array<Dependency>> = [];
 
             if (data.length) {
                 let length = this.headers().length;
-                this.deps = [];
 
                 for (let fdr = 0; fdr < length; fdr++) {
-                    let fdRow = [];
+                    // fdr = functional dependency row being checked
+                    let fdRow: Array<Dependency> = [];
 
                     for (let fdc = 0; fdc < length; fdc++) {
+                        // fdc = functional dependency column being checked
                         let deps = {};
-                        let result = fdr === fdc ? '-' : 'true';
+                        let result: Dependency = new Dependency();
 
-                        for (let i = 0; i < data.length && result === 'true'; i++) {
-                            let key = data[i][fdr];
-                            let value = data[i][fdc];
-                            let dep = deps[key];
+                        if (fdr === fdc) {
+                            // trivial dependency
+                            result.lastIndex = result.failIndex = -1;
+                        }
+                        else {
+                            // non-trivial
+                            for (let dr = 0; dr < data.length && result.failIndex === null; dr++) {
+                                // dr = data row being checked
+                                let key: string = data[dr][fdr];
+                                let value: string = data[dr][fdc];
+                                let dep: Dependency = deps[key];
 
-                            if (dep) {
-                                if (value !== dep.value) {
-                                    result = `${dep.index + 1}:${i + 1}`;
+                                if (dep) {
+                                    if (value !== dep.value) {
+                                        deps[key].failIndex = dr;
+                                        result = deps[key];
+                                    }
+                                    else {
+                                        deps[key].lastIndex = dr;
+                                    }
                                 }
-                            }
-                            else {
-                                deps[key] = new Depenedency(value, i);
+                                else {
+                                    deps[key] = new Dependency(value, dr);
+                                }
                             }
                         }
 
                         fdRow.push(result);
-                        this.deps.push(deps);
                     }
 
                     fds.push(fdRow);
                 }
             }
             return fds;
+        });
+
+        this.compositeFds = ko.pureComputed((): Array<Dependency> => {
+            let data = this.data();
+            let fds: Array<Dependency> = [];
+
+            if (data.length) {
+                let length = this.headers().length;
+
+                for (let fdc = 0; fdc < length; fdc++) {
+                    // fdc = functional dependency column being checked
+                    let deps = {};
+                    let result: Dependency = new Dependency();
+                    let compositeIndices = this.compositeIndices();
+                    let filterLength: number = compositeIndices.filter((index) => index.value() === fdc).length;
+
+                    if (filterLength === 0) {
+                        // non-trivial
+                        for (let dr = 0; dr < data.length && result.failIndex === null; dr++) {
+                            // dr = data row being checked
+                            let key: string = '';
+
+                            compositeIndices.forEach((index: Value<number>) => {
+                                key += data[dr][index.value()] +  ' ';
+                            });
+
+                            let value: string = data[dr][fdc];
+                            let dep: Dependency = deps[key];
+
+                            if (dep) {
+                                if (value !== dep.value) {
+                                    deps[key].failIndex = dr;
+                                    result = deps[key];
+                                }
+                                else {
+                                    deps[key].lastIndex = dr;
+                                }
+                            }
+                            else {
+                                deps[key] = new Dependency(value, dr);
+                            }
+                        }
+                    }
+                    else {
+                        // trivial dependency
+                        result.lastIndex = result.failIndex = -1;
+                    }
+
+                    fds.push(result);
+                }
+            }
+            return fds;
+        });
+
+        this.unwrappedComposites = ko.pureComputed((): Array<number> => {
+            return this.compositeIndices().map((index): number => index.value());
+        });
+
+        this.compositeVisible = ko.pureComputed((): boolean => {
+            return this.unwrappedComposites().filter((index: number): boolean => index > 0 || index === 0).length !== 0;
         });
     }
 
@@ -121,6 +229,24 @@ export class AppView extends BaseView {
 
     onFileLoad(e: any) {
         this.dataString(e.target.result);
+    }
+
+    depClick(dep: Dependency, dependentIndex: number = null, determinantIndices: Array<number> = []) {
+        if (dep.failIndex !== null) {
+            this.lastIndex(dep.lastIndex);
+            this.failIndex(dep.failIndex);
+            this.determinantIndices(determinantIndices);
+            this.dependentIndex(dependentIndex);
+
+            window.scrollTo(window.scrollX, 0);
+        }
+    }
+
+    clearHighlight() {
+        this.lastIndex(null);
+        this.failIndex(null);
+        this.determinantIndices([]);
+        this.dependentIndex(null);
     }
 }
 

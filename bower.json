@@ -10,6 +10,7 @@
     "sammy": "^0.7.6",
     "lodash": "^4.16.2",
     "knockout": "^3.4.0",
-    "knockout-mapping": "^2.4.1"
+    "knockout-mapping": "^2.4.1",
+    "bootstrap": "v4.0.0-alpha.3"
   }
 }

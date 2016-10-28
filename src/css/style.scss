@@ -1,16 +1,29 @@
-//@import '../vendor/bootstrap/scss/bootstrap';
+@import '../vendor/bootstrap/scss/bootstrap';
 
-$square-size: 3;
+$table-padding: 4px;
 
+$white: #ffffff;
 $black: #000000;
-$red: #dd0000;
+$red: #ff0000;
 $blue: #1166aa;
 $yellow: #ffff00;
+$orange: #ff9900;
+$light-gray: darken($white, 20%);
 $light-blue: lighten($blue, 20%);
+
+$conflict-color: $red;
+$determinant-color: $yellow;
+$dependent-color: $orange;
 
 $danger: $red;
 
 $font-size: 1em;
+
+body {
+    margin: 10px;
+    font-family: "Lucida Console", Monaco, monospace;
+    line-height: 1.5;
+}
 
 .clickable {
     cursor: pointer;
@@ -23,11 +36,52 @@ $font-size: 1em;
 
 .tr {
     display: table-row;
+
+    &.conflict {
+        background-color: $conflict-color;
+
+        .td {
+            &.determinant {
+                background-color: $yellow;
+            }
+
+            &.dependent {
+                background-color: $orange;
+            }
+        }
+    }
+}
+
+.margin-top-bottom {
+    margin-top: 4x;
+    margin-bottom: 4px;
+}
+
+.btn {
+    @extend .margin-top-bottom;
+}
+
+.conflict-info {
+    span {
+        padding: $table-padding;
+    }
+
+    .conflict {
+        background-color: $conflict-color;
+    }
+
+    .determinant {
+        background-color: $yellow;
+    }
+
+    .dependent {
+        background-color: $orange;
+    }
 }
 
 .td {
     display: table-cell;
-    padding: 4px;
+    padding: $table-padding;
     min-width: 50px;
     white-space: nowrap;
 }
@@ -61,6 +115,18 @@ $font-size: 1em;
     width: 100%;
     max-height: 75vh;
     overflow: auto;
+}
+
+.row-highlight {
+    background-color: $red;
+}
+
+.dep {
+    &.clickable {
+        &:hover {
+            background-color: $light-gray;
+        }
+    }
 }
 
 h1,

@@ -1,18 +1,24 @@
 <h1>
     Functional Dependency Finder
 </h1>
-<br />
-
 <div>
     <input class="input-file" type="file" data-bind="event: { change: function(data, e) { this.fileChanged(e); } }" />
     <br />
     <input id="hasHeader" type="checkbox" data-bind="checked: hasHeader" />
     <label class="clickable" for="hasHeader">Data includes a header</label>
 </div>
-<br />
 
 <div class="width-100" data-bind="visible: data().length !== 0">
     <h3>Data</h3>
+    <div data-bind="visible: lastIndex() !== null">
+        <div class="btn btn-secondary" data-bind="click: function() { this.clearHighlight(); }">Clear Highlight</div>
+        <div class="conflict-info margin-top-bottom">
+            <span class="conflict">Conflicting Rows</span> 
+            <span class="determinant">Determinant</span> 
+            <span class="dependent">Dependent</span>
+        </div>
+    </div>
+
     <div class="table-container">
         <div class="table border data">
             <div class="tr bold">
@@ -22,10 +28,10 @@
                 <!-- /ko -->
             </div>
             <!-- ko foreach: data -->
-            <div class="tr">
+            <div class="tr" data-bind="attr: { id: 'data_row_' + $index() }, css: { conflict: $index() === $parent.lastIndex() || $index() === $parent.failIndex() }">
                 <div class="td bold" data-bind="text: $index() + 1"></div>
                 <!-- ko foreach: $data -->
-                <div class="td" data-bind="text: $data"></div>
+                <div class="td" data-bind="text: $data, css: { determinant: $parents[1].determinantIndices().indexOf($index()) !== -1, dependent: $index() === $parents[1].dependentIndex() }"></div>
                 <!-- /ko -->
             </div>
             <!-- /ko -->
@@ -38,10 +44,10 @@
         <div>true = Row determines Column<div>
         <div>m:n = Conflict between entries m and n<div>
         <div>- = Trivial<div>
+        <div>Click on a conflict to see the corresponding data</div>
         <input id="highlight" type="checkbox" data-bind="checked: highlight" />
         <label class="clickable" for="highlight">Highlight functional dependencies</label>
     </div>
-    <br />
 
     <div class="table-container">
         <div class="table border">
@@ -56,11 +62,49 @@
                 <div class="td bold" data-bind="text: $parent.headers()[$index()]"></div>
 
                 <!-- ko foreach: $data -->
-                <div class="td" data-bind="text: $data, css: { highlight: $data === 'true' && $parents[1].highlight() }"></div>
+                <div class="td dep" data-bind="text: display(), css: { highlight: exists() && $parents[1].highlight(), clickable: !exists() && !trivial() }, click: function() { $parents[1].depClick(this, $index(), [$parentContext.$index()]); }"></div>
                 <!-- /ko -->
             </div>
             <!-- /ko -->
         </div>
     </div>
     <br />
+
+    <div class="margin-top-bottom">
+        <h3>Composite Dependencies</h3>
+        <div>Select two attributes to make up the composite determinant</div>
+        <div data-bind="foreach: compositeIndices">
+            <select data-bind="value: value">
+                <option value="">-</option>
+                <!-- ko foreach: $parent.headers -->
+                <option data-bind="value: $index(), text: $data"></option>
+                <!-- /ko -->
+            </select>
+        </div>
+    </div>
+
+    <div class="table-container" data-bind="visible: compositeVisible">
+        <div class="table border composite">
+            <div class="tr bold">
+                <div class="td"></div>
+                <!-- ko foreach: headers -->
+                    <div class="td" data-bind="text: $data"></div>
+                <!-- /ko -->
+            </div>
+            <div class="tr">
+                <div class="td bold">
+                    {
+                    <span data-bind="foreach: compositeIndices">
+                        <span data-bind="text: $parent.headers()[value()]"></span>
+                    </span>
+                    }
+                </div>
+                <!-- ko foreach: compositeFds -->
+                <div class="td dep" data-bind="text: display(), css: { highlight: exists() && $parent.highlight(), clickable: !exists() && !trivial() }, click: function() { $parent.depClick(this, $index(), $parent.unwrappedComposites()); }"></div>
+                <!-- /ko -->
+            </div>
+        </div>
+    </div>
+    <br />
+
 </div>
