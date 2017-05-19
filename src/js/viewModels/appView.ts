@@ -224,6 +224,10 @@ export class AppView extends BaseView {
 
     fileChanged(e: any) {
         let file: File = e.target.files[0];
+
+        this.compositeIndices().forEach((index: Value<number>) => {
+            index.value(null);
+        });
         this.fileReader.readAsText(file);
     }
 
