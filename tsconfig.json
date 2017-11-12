@@ -1,10 +1,8 @@
 {
     "compilerOptions": {
-        "module": "amd"
-    },
-    "exclude": [
-        ".vscode",
-        "node_modules",
-        "bower_components"
-    ]
+        "module": "amd",
+        "baseUrl": "src/js",
+        "moduleResolution": "node",
+        "lib": ["dom", "es5", "es2015.promise"]
+    }
 }
