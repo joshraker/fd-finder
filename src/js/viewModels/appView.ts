@@ -69,7 +69,10 @@ export class AppView extends BaseView {
             let data: Array<Array<string>> = [];
             let rowStrings: Array<string> = this.dataString().split(/\n/);
             let headers: Array<string> = [];
-            rowStrings.pop(); // remove the empty final row
+
+            if (rowStrings[rowStrings.length - 1].length === 0) {
+                rowStrings.pop(); // remove the empty final row if it exists
+            }
 
             rowStrings.forEach((rowString) => {
                 let row: Array<string> = rowString.split(/,/);
